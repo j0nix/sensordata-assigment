@@ -19,11 +19,13 @@ Offset      Field name      Type            Size        Description
 --------------------------------------------------------------------------------------------------
 
 """
-import sys, socket, time, pytz, json, socket, threading, logging, os
+import sys, socket, time, pytz, json, socket, threading, os
 from struct import *
 from datetime import datetime
 from argparse import ArgumentParser
 from argparse import RawTextHelpFormatter
+import logzero, logging
+from logzero import logger
 
 epilog = """
 Example)
@@ -53,12 +55,9 @@ optional.add_argument(
 )
 args = parser.parse_args()
 
-"""Logging setup"""
+# Set a custom formatter
 log_adjust = max(min(args.quiet - args.verbose, 2), -2)
-logging.basicConfig(
-    level=logging.INFO + log_adjust * 10,
-    format="[%(levelname)s] [%(module)s] %(message)s",
-)
+logzero.loglevel(logging.INFO + log_adjust * 10)
 
 # A simple UDP Server
 class UDPServer:
@@ -94,7 +93,7 @@ class UDPSensorPacketParser(UDPServer):
         # Call init from inherited/parent class
         super().__init__(host, port)
         self.prefix = file_prefix
-        logging.info("Started UDP server @ {}:{}".format(host, port))
+        logger.info("Started UDP server @ {}:{}".format(host, port))
 
     def incoming_message(self, data, address):
         # UDP Packet Headers
@@ -112,16 +111,16 @@ class UDPSensorPacketParser(UDPServer):
                 try:
                     self.log_data(parsed_dict)
                 except Exception as e:
-                    logging.warning("Failed to send data to log outout ({})".format(e))
+                    logger.warning("Failed to send data to log outout ({})".format(e))
             else:
-                logging.warning(
+                logger.warning(
                     "Actual packet size and header packet size missmatch. (Data size: {}, packet_size_in_header: {}) data: {}".format(
                         len(data), p_size, data
                     )
                 )
                 raise error
         except error as e:
-            logging.error(
+            logger.error(
                 "Failed to parse packet({}) from {} ({})".format(data, address, e)
             )
 
@@ -144,14 +143,14 @@ class UDPSensorPacketParser(UDPServer):
                     c_thread.start()
 
                 except Exception as e:
-                    logging.error("Failed get incoming message ({})".format(e))
+                    logger.error("Failed get incoming message ({})".format(e))
 
         except KeyboardInterrupt:
             self.shutdown()
 
     def log_data(self, data):
 
-        logging.debug(json.dumps(data))
+        logger.debug(json.dumps(data))
         # set filename
         try:
             data["name"]
@@ -168,7 +167,7 @@ class UDPSensorPacketParser(UDPServer):
                 writer.write("{}\n".format(json.dumps(data)))
 
         except Exception as e:
-            logging.error("Failed to send data to logfile ({})".format(e))
+            logger.error("Failed to send data to logfile ({})".format(e))
 
     def decode_sensor_data(self, message, msg_size, timestamp, name_length):
 
@@ -188,7 +187,7 @@ class UDPSensorPacketParser(UDPServer):
         try:
             name = unpack(">{}s".format(name_length), message[n_start:n_stop])
         except error as e:
-            logging.warning(
+            logger.warning(
                 "failed to unpack name ({}), message data: {}, ignoring packet".format(
                     e, message
                 )
@@ -202,7 +201,7 @@ class UDPSensorPacketParser(UDPServer):
                 datetime.now(pytz.timezone("Europe/Stockholm")).strftime("%z")[0:3],
             )
         except ValueError as e:
-            logging.error("failed to parse date data ({}), ignore packet".format(e))
+            logger.error("failed to parse date data ({}), ignore packet".format(e))
             return json_dict
 
         # Add data to dictonary we will return from read sensor data
@@ -266,7 +265,7 @@ class UDPSensorPacketParser(UDPServer):
                     1,
                 )
             except Exception as e:
-                logging.error("Error when modeling temperature with decimals")
+                logger.error("Error when modeling temperature with decimals")
 
         # Do we have humidity value?
         # Do we need to add decimal to value?
@@ -279,7 +278,7 @@ class UDPSensorPacketParser(UDPServer):
                     1,
                 )
             except Exception as e:
-                logging.error("Error when modeling humidity with decimals")
+                logger.error("Error when modeling humidity with decimals")
 
         return json_dict
 
