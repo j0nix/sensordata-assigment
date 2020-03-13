@@ -10,11 +10,11 @@ My aproach to this is to make a wrapper for the generator binary and send data t
 3. Inspect result in file/files
 
 ### Start server
-```bash
+```
 $ python server.py 
 [INFO] [server] Started UDP server @ 127.0.0.1:10514
 ```
-```bash
+```
 usage: server.py [-h] [-v] [-q] [-p XX]
 
 Assigment: Read input from a number of sensors and output log files.
