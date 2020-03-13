@@ -48,7 +48,7 @@ class UDPServer:
         except Exception as e:
             print("Failed to fetch incoming message from socket ({})".format(e))
 
-        print(data.decode('utf-8'))
+        print(data.decode("utf-8"))
 
     def shutdown(self):
         self.sock.close()
@@ -80,7 +80,11 @@ class UDPSensorPacketParser(UDPServer):
                 except Exception as e:
                     print("failed to send data to log outout ({})".format(e))
             else:
-                print("Exception: data:{}, len(data):{}, packet_size_in_header:{})".format(data,len(data),p_size))
+                print(
+                    "Exception: data:{}, len(data):{}, packet_size_in_header:{})".format(
+                        data, len(data), p_size
+                    )
+                )
                 raise error
         except error as e:
             print("failed to parse packet({}) from {} ({})".format(data, address, e))
@@ -232,6 +236,7 @@ def main():
     # Create UDP server and listen for incoming packets from generator-wrapper.py
     server = UDPSensorPacketParser("127.0.0.1", 10514)
     server.recv_message()
+
 
 if __name__ == "__main__":
     main()
