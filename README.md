@@ -3,7 +3,7 @@ The assignment is to read input from a number of sensors and output log files.
 ## Solution
 My aproach to this is to make a wrapper for the generator binary and send data to a 'server' for parsing and logging of data.
 
-## Howto test solution
+## HowTo
 
 1. Start server
 2. Start sensor-generator wrapper
