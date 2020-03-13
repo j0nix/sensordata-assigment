@@ -1,11 +1,8 @@
+""" Generator wrapper. Send sensor data output with UDP over port 10514 """
 import sys, subprocess, socket, os, time, logging, string, random
 from argparse import ArgumentParser
 from argparse import RawTextHelpFormatter
 
-""" Generator wrapper. Send sensor data output with UDP over port 10514 """
-
-__author__ = "Jon Svendsen"
-__version__ = "1.0"
 epilog = """
 
 Example)
@@ -13,7 +10,7 @@ Example)
 ________________________________________________________
 /j0nixRulez
 
-"""
+""".format(sys.argv[0])
 
 ## Argument parser setup
 parser = ArgumentParser(

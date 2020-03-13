@@ -1,9 +1,3 @@
-import sys, socket, time, pytz, json, socket, threading, logging, os
-from struct import *
-from datetime import datetime
-from argparse import ArgumentParser
-from argparse import RawTextHelpFormatter
-
 """
 Assigment: Read input from a number of sensors and output log files.
 Author: Jon Svendsen
@@ -25,14 +19,18 @@ Offset      Field name      Type            Size        Description
 --------------------------------------------------------------------------------------------------
 
 """
-__author__ = "Jon Svendsen"
-__version__ = "1.0"
+import sys, socket, time, pytz, json, socket, threading, logging, os
+from struct import *
+from datetime import datetime
+from argparse import ArgumentParser
+from argparse import RawTextHelpFormatter
+
 epilog = """
 Example)
    python {} -p j0nix -v
 ________________________________________________________
 /j0nixRulez
-"""
+""".format(sys.argv[0])
 
 ## Argument parser setup
 parser = ArgumentParser(
