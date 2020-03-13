@@ -151,6 +151,7 @@ class UDPSensorPacketParser(UDPServer):
             )
 
     def __log_data(self, data):
+
         logger.debug(json.dumps(data))
         # set filename
         try:
