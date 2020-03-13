@@ -28,6 +28,8 @@ Offset      Field name      Type            Size        Description
 __author__ = "Jon Svendsen"
 __version__ = "1.0"
 epilog = """
+Example)
+   python {} -p j0nix -v
 ________________________________________________________
 /j0nixRulez
 """
@@ -49,7 +51,7 @@ optional.add_argument(
     "-q", "--quiet", action="count", default=0, help="decrease log level"
 )
 optional.add_argument(
-    "-p", "--prefix", dest="prefix", default=None, help="set logfile prefix"
+    "-p", "--prefix", dest="prefix", metavar="XX", default=None, help="set logfile prefix"
 )
 args = parser.parse_args()
 

@@ -10,7 +10,8 @@ epilog = """
 
 Example)
    python {} -s 3
-______________________________________
+________________________________________________________
+/j0nixRulez
 
 """
 
@@ -38,7 +39,7 @@ required.add_argument(
     metavar="N",
     type=int,
     required=True,
-    help="how many processes to spawn",
+    help="how many generators processes to spawn",
 )
 args = parser.parse_args()
 
