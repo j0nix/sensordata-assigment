@@ -60,9 +60,7 @@ logging.basicConfig(
     format="[%(levelname)s] [%(module)s] %(message)s",
 )
 
-""" A simple UDP Server """
-
-
+# A simple UDP Server
 class UDPServer:
     def __init__(self, host, port):
         self.host = host  # Host address
@@ -76,27 +74,26 @@ class UDPServer:
         # Listen for incoming messages
         try:
             data, address = self.sock.recvfrom(1024)
+            print(data.decode("utf-8"))
         except Exception as e:
             print("Failed to fetch incoming message from socket ({})".format(e))
 
-        print(data.decode("utf-8"))
-
     def shutdown(self):
+        print("\nBye Bye!")
         self.sock.close()
 
 
 """
 OUR MAGICAL SERVER
 WHAT IT DOES: Fetches incoming packets, parse them to human readable text and finally logs the data as json to a file
+# inherits UDPServer class, just for fun, and overwrites 'recv_message' function and also add some more cool functions required for the assigment
 """
-
 
 class UDPSensorPacketParser(UDPServer):
     def __init__(self, host, port, file_prefix=None):
         # Call init from inherited/parent class
         super().__init__(host, port)
         self.prefix = file_prefix
-        self.socket_lock = threading.Lock()
         logging.info("Started UDP server @ {}:{}".format(host, port))
 
     def incoming_message(self, data, address):

@@ -49,69 +49,75 @@ logging.basicConfig(
     format="%(levelname)-8s[%(module)10s] %(message)s",
 )
 
+
+# Define UDP sender, to make it easy, make it global
+SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+HOST, PORT = "127.0.0.1", 10514
+
 # Simple string generator
 def randomString(stringLength=16):
-    """Generate a random string of fixed length """
+    """Generate a random string"""
     letters = string.ascii_lowercase
     return "".join(random.choice(letters) for i in range(stringLength))
 
 
+def UDPsender(data):
+
+    # since read data can have more than one packet I below make sure we read all data
+    # start at the beginning of data
+    start = 0
+    # if our start position is lower than the size of the package
+    while start < len(data):
+        # Read from header how big our package is
+        p_size = int.from_bytes(data[start : start + 4], "big")
+        # send data in the size defined in header
+        SOCKET.sendto(data[start : start + p_size], (HOST, PORT))
+        logging.debug("\t-> {}".format(data[start : start + p_size]))
+        # set start position at the end of the package size
+        start += p_size
+
+
 def processSpawner(name, command):
 
-    # Define UDP sender
-    host, port = "127.0.0.1", 10514
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    # define
+    # define generators
     procs = []
-    # start subprocesses
-    # for sub in command:
-    #    procs.append(subprocess.Popen(sub,stdout=subprocess.PIPE,bufsize=0,shell=True))
-    #    time.sleep(1)
     procs = [
         subprocess.Popen(i, stdout=subprocess.PIPE, bufsize=0, shell=True)
         for i in command
     ]
+
     logging.info("all processes started")
 
     # while generator running, send output over UDP
     while True:
+        # loop over processes
         for p in procs:
-            # get generator output
             data = None
+            # get generator output
             try:
                 data = p.stdout.read(1024)
-            except:
-                pass
-
-            # send generator output
-            if data:
-                start = 0
-                while start < len(data):
-                    p_size = int.from_bytes(data[start : start + 4], "big")
-                    sock.sendto(data[start : start + p_size], (host, port))
+                # send generator output
+                if data:
                     logging.debug(
-                        "'Sensor:{} with PID {}' sent {} to {}:{}".format(
-                            name[procs.index(p)],
-                            p.pid,
-                            data[start : start + p_size],
-                            host,
-                            port,
+                        "'Sensor:{} with PID {}' sending data to {}:{}".format(
+                            name[procs.index(p)], p.pid, HOST, PORT
                         )
                     )
-                    start += p_size
+                    # Send data
+                    UDPsender(data)
+                    # check if process is finished and send anything not sent
+                    return_code = p.poll()
+                    if return_code is not None:
+                        UDPsender(data, sock)
+                else:
+                    logging.debug("{} - {}".format(p.pid, error))
 
-                # check if process is finished
-                return_code = p.poll()
-                if return_code is not None:
-                    ## untested code, the idea is to parse whatever way be left after process is finished
-                    logging.debug("RETURN CODE", return_code)
-                    # Process has finished, read rest of the output
-                    for output in p.stdout.read(34):
-                        sock.sendto(data.encode("utf-8"), (host, port))
-                    break
-            else:
-                logging.debug("{} - {}".format(p.pid, error))
-        # p.wait()
+            except KeyboardInterrupt:
+                print("\n\n\tCauth KeyboardInterrupt, Bye Bye!\n\n")
+                sys.exit(0)
+            except Exception as e:
+                logging.error("OOOoopss, some error ({})".format(e))
+                sys.exit(1)
 
 
 if __name__ == "__main__":
