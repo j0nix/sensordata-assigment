@@ -47,7 +47,7 @@ ________________________________________________________
 /j0nixRulez
 ```
 ### Start generator
-```bash
+```
 $ python generator-wrapper.py -s 1
 INFO    [generator-wrapper] Spawning 1 generator processes
 INFO    [generator-wrapper] starting sensor vuxexekctlrkcbpd
