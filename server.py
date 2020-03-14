@@ -90,6 +90,7 @@ class UDPSensorPacketParser(UDPServer):
         super().__init__(host, port)
         # Set the filename prefix, if any
         self.prefix = file_prefix
+
         logger.info("Started UDP server @ {}:{}".format(host, port))
 
     def recv_message(self):
