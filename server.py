@@ -16,16 +16,21 @@ Example)
    python {} -p j0nix -v
 ________________________________________________________
 /j0nixRulez
-""".format(sys.argv[0])
+""".format(
+    sys.argv[0]
+)
 
 ## Argument parser setup
 parser = ArgumentParser(
-    formatter_class=RawTextHelpFormatter,
-    description=__doc__,
-    epilog=epilog,
+    formatter_class=RawTextHelpFormatter, description=__doc__, epilog=epilog,
 )
 parser.add_argument(
-        "-b", "--bind", dest="addr", metavar="XX", default="127.0.01", help="adress to bind to (Default: 127.0.0.1)"
+    "-b",
+    "--bind",
+    dest="addr",
+    metavar="XX",
+    default="127.0.01",
+    help="adress to bind to (Default: 127.0.0.1)",
 )
 parser.add_argument(
     "-v", "--verbose", action="count", default=0, help="increase log level"
@@ -34,7 +39,12 @@ parser.add_argument(
     "-q", "--quiet", action="count", default=0, help="decrease log level"
 )
 parser.add_argument(
-    "-p", "--prefix", dest="prefix", metavar="XX", default=None, help="set logfile prefix"
+    "-p",
+    "--prefix",
+    dest="prefix",
+    metavar="XX",
+    default=None,
+    help="set logfile prefix",
 )
 args = parser.parse_args()
 
@@ -42,7 +52,7 @@ args = parser.parse_args()
 log_adjust = max(min(args.quiet - args.verbose, 2), -2)
 logging.basicConfig(
     level=logging.INFO + log_adjust * 10,
-    format="[%(levelname)s] [%(module)s] %(message)s"
+    format="[%(levelname)s] [%(module)s] %(message)s",
 )
 
 """
@@ -75,7 +85,7 @@ class UDPServer:
         self.sock.close()
 
 
-# Starts a UDP server when initiated. 
+# Starts a UDP server when initiated.
 # Class for all required parsing of our sensor data
 class UDPSensorPacketParser(UDPServer):
     def __init__(self, host, port, file_prefix=None):
@@ -105,7 +115,9 @@ class UDPSensorPacketParser(UDPServer):
                         c_thread.daemon = True
                         c_thread.start()
                     except Exception as e:
-                        logging.error("Failed to start daemon for incoming message".format(e))
+                        logging.error(
+                            "Failed to start daemon for incoming message".format(e)
+                        )
                         raise e
 
                 except Exception as e:

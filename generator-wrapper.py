@@ -22,7 +22,12 @@ parser = ArgumentParser(
     prog=os.path.basename(sys.argv[0]),
 )
 parser.add_argument(
-        "-d", "--dest", dest="dest", metavar="XX", default="127.0.01", help="adress to send to (Default: 127.0.0.1)"
+    "-d",
+    "--dest",
+    dest="dest",
+    metavar="XX",
+    default="127.0.01",
+    help="adress to send to (Default: 127.0.0.1)",
 )
 parser.add_argument(
     "-v", "--verbose", action="count", default=0, help="increase log level"
