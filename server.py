@@ -56,8 +56,6 @@ logging.basicConfig(
 )
 
 """
-   What happens down here?
-
 Note: UDPSensorPacketParser inherits UDPServer class, just for showcasing
       OOP style programming. Overwrites 'recv_message' function and also
       add some more cool functions required for solving the assigment
