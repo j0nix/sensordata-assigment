@@ -10,7 +10,9 @@ Example)
 ________________________________________________________
 /j0nixRulez
 
-""".format(sys.argv[0])
+""".format(
+    sys.argv[0]
+)
 
 ## Argument parser setup
 parser = ArgumentParser(
@@ -19,13 +21,13 @@ parser = ArgumentParser(
     epilog=epilog,
     prog=os.path.basename(sys.argv[0]),
 )
-
-parser._action_groups.pop()
-optional = parser.add_argument_group(title="optional arguments")
-optional.add_argument(
+parser.add_argument(
+        "-d", "--dest", dest="dest", metavar="XX", default="127.0.01", help="adress to send to (Default: 127.0.0.1)"
+)
+parser.add_argument(
     "-v", "--verbose", action="count", default=0, help="increase log level"
 )
-optional.add_argument(
+parser.add_argument(
     "-q", "--quiet", action="count", default=0, help="decrease log level"
 )
 required = parser.add_argument_group(title="required arguments")
@@ -50,7 +52,7 @@ logging.basicConfig(
 
 # Define UDP sender, to make it easy, make it global
 SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-HOST, PORT = "127.0.0.1", 10514
+HOST, PORT = args.dest, 10514
 
 # Simple string generator
 def randomString(stringLength=16):
@@ -77,55 +79,66 @@ def UDPsender(data):
 
 def processSpawner(name, command):
 
-    # define generators
     procs = []
-    procs = [
-        subprocess.Popen(i, stdout=subprocess.PIPE, bufsize=0, shell=True)
-        for i in command
-    ]
 
-    logging.info("all processes started")
+    # Open the generator/generators
+    try:
+        # loop over commands array and start a subprocess and pipe stdout and don't buffer anything
+        procs = [
+            subprocess.Popen(x, stdout=subprocess.PIPE, bufsize=0, shell=True)
+            for x in command
+        ]
 
-    # while generator running, send output over UDP
-    while True:
-        # loop over processes
-        for p in procs:
-            data = None
-            # get generator output
-            try:
-                data = p.stdout.read(1024)
-                # send generator output
-                if data:
-                    logging.debug(
-                        "'Sensor:{} with PID {}' sending data to {}:{}".format(
-                            name[procs.index(p)], p.pid, HOST, PORT
+    except Exeption as e:
+        logging.error("Failed to start generator ({})".format(e))
+        sys.exit(1)
+    else:
+        logging.info("all processes started")
+
+        # while generator running, send output over UDP
+        while True:
+            # loop over processes
+            for p in procs:
+                data = None
+                # get generator output
+                try:
+                    data = p.stdout.read(1024)
+                    # send generator output
+                    if data:
+                        logging.debug(
+                            "'Sensor:{} with PID {}' sending data to {}:{}".format(
+                                name[procs.index(p)], p.pid, HOST, PORT
+                            )
                         )
-                    )
-                    # Send data
-                    UDPsender(data)
-                    # check if process is finished and send anything not sent
-                    return_code = p.poll()
-                    if return_code is not None:
-                        UDPsender(data, sock)
-                else:
-                    logging.debug("{} - {}".format(p.pid, error))
+                        # Send data
+                        UDPsender(data)
+                        # check if process is finished and send anything not sent
+                        return_code = p.poll()
+                        if return_code is not None:
+                            UDPsender(data, sock)
+                    else:
+                        logging.debug("{} - {}".format(p.pid, error))
 
-            except KeyboardInterrupt:
-                print("\n\n\tCauth KeyboardInterrupt, Bye Bye!\n\n")
-                sys.exit(0)
-            except Exception as e:
-                logging.error("OOOoopss, some error ({})".format(e))
-                sys.exit(1)
+                except KeyboardInterrupt:
+                    print("\n\n\tCauth KeyboardInterrupt, Bye Bye!\n\n")
+                    sys.exit(0)
+                except Exception as e:
+                    logging.error("OOOoopss, some error ({})".format(e))
+                    sys.exit(1)
 
 
 if __name__ == "__main__":
 
     logging.info("Spawning {} generator processes".format(args.spawn))
+    # Array for storing sensor names, this so we can map which sensor is logging when debug
     sensor_name = []
+    # Array for storing commands that spawns subprocesses
     command = []
 
     for x in range(args.spawn):
+        # Generate a random name for sensor
         sensor_name.append(randomString())
+        # Add a command we will execute, using that random name we just created
         command.append(
             os.path.dirname(os.path.realpath(__file__))
             + "/bin/sensor_data.x86_64-unknown-linux-gnu --name {}".format(
@@ -134,4 +147,5 @@ if __name__ == "__main__":
         )
         logging.info("starting sensor {}".format(sensor_name[x]))
     else:
+        # Let's get started and spawn some processes
         processSpawner(sensor_name, command)

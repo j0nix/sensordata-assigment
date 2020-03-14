@@ -1,23 +1,9 @@
 """
-Assigment: Read input from a number of sensors and output log files.
-Author: Jon Svendsen
-License: Free as in beer
+   Fetch incoming packets from sensors on port 10514, parse them to human readable text
+   and finally log the data as json to a file named as the sensor sending the data
 
--- PACKET SPEC for incoming messages -------------------------------------------------------------
---------------------------------------------------------------------------------------------------
-Offset      Field name      Type            Size        Description
---------------------------------------------------------------------------------------------------
-0           plength         uint            4 bytes     The length of package,including this field
-4           timestamp       uint            8 bytes     Unix timestamp, in milliseconds
-12          nlen            uint            1 byte      The length of the name
-13          name            string          nlen bytes  The length of the name
-13 + nlen   temperature     uint            3 bytes     In hundredths of K
-16 + nlen   humidity        uint            2 bytes     Relative humidity in ‰
---------------------------------------------------------------------------------------------------
-- Both temperature and humidity are optional.
-- This means that the offset for humidity can also be 13 + nlen
---------------------------------------------------------------------------------------------------
-
+   Author:     Jon Svendsen
+   License:    Free as in beer
 """
 import sys, socket, time, pytz, json, socket, threading, logging, os
 from struct import *
@@ -37,18 +23,17 @@ parser = ArgumentParser(
     formatter_class=RawTextHelpFormatter,
     description=__doc__,
     epilog=epilog,
-    prog=os.path.basename(sys.argv[0]),
 )
-
-parser._action_groups.pop()
-optional = parser.add_argument_group(title="optional arguments")
-optional.add_argument(
+parser.add_argument(
+        "-b", "--bind", dest="addr", metavar="XX", default="127.0.01", help="adress to bind to (Default: 127.0.0.1)"
+)
+parser.add_argument(
     "-v", "--verbose", action="count", default=0, help="increase log level"
 )
-optional.add_argument(
+parser.add_argument(
     "-q", "--quiet", action="count", default=0, help="decrease log level"
 )
-optional.add_argument(
+parser.add_argument(
     "-p", "--prefix", dest="prefix", metavar="XX", default=None, help="set logfile prefix"
 )
 args = parser.parse_args()
@@ -57,9 +42,16 @@ args = parser.parse_args()
 log_adjust = max(min(args.quiet - args.verbose, 2), -2)
 logging.basicConfig(
     level=logging.INFO + log_adjust * 10,
-    format="[%(levelname)s] [%(module)s] %(message)s",
+    format="[%(levelname)s] [%(module)s] %(message)s"
 )
 
+"""
+   What happens down here?
+
+Note: UDPSensorPacketParser inherits UDPServer class, just for showcasing
+      OOP style programming. Overwrites 'recv_message' function and also
+      add some more cool functions required for solving the assigment
+"""
 # A simple UDP Server
 class UDPServer:
     def __init__(self, host, port):
@@ -83,22 +75,47 @@ class UDPServer:
         self.sock.close()
 
 
-"""
-OUR MAGICAL SERVER
-WHAT IT DOES: Fetches incoming packets, parse them to human readable text and finally logs the data as json to a file
-# inherits UDPServer class, just for fun, and overwrites 'recv_message' function and also add some more cool functions required for the assigment
-"""
-
+# Starts a UDP server when initiated. 
+# Class for all required parsing of our sensor data
 class UDPSensorPacketParser(UDPServer):
     def __init__(self, host, port, file_prefix=None):
         # Call init from inherited/parent class
         super().__init__(host, port)
+        # Set the filename prefix, if any
         self.prefix = file_prefix
+
         logging.info("Started UDP server @ {}:{}".format(host, port))
 
-    def incoming_message(self, data, address):
-        # UDP Packet Headers
-        p_size, p_timestamp, p_nlength = (None, None, None)
+    def recv_message(self):
+
+        try:
+            # Run until further notice
+            while True:
+                # Get incoming packet/message
+                try:
+                    data, address = self.sock.recvfrom(1024)
+                    try:
+                        # Threads to handle multiple "clients"
+                        c_thread = threading.Thread(
+                            # Thread out and run function __incoming_message to start parsing package/message
+                            target=self.__incoming_message,
+                            args=(data, address),
+                        )
+                        # run in background
+                        c_thread.daemon = True
+                        c_thread.start()
+                    except Exception as e:
+                        logging.error("Failed to start daemon for incoming message".format(e))
+                        raise e
+
+                except Exception as e:
+                    logging.error("Failed get incoming message ({})".format(e))
+
+        except KeyboardInterrupt:
+            self.shutdown()
+
+    def __incoming_message(self, data, address):
+
         try:
             # Parse header data. size & nlength (name length) will be used to eveluate and parse the rest of the message
             p_size, p_timestamp, p_nlength = unpack(">IQB", data[:13])
@@ -106,11 +123,11 @@ class UDPSensorPacketParser(UDPServer):
             # make sure that the numbers adds up
             if len(data) == p_size:
                 # Decode rest of message and log as json to a logfile
-                parsed_dict = self.decode_sensor_data(
+                parsed_dict = self.__decode_sensor_data(
                     data, p_size, p_timestamp, p_nlength
                 )
                 try:
-                    self.log_data(parsed_dict)
+                    self.__log_data(parsed_dict)
                 except Exception as e:
                     logging.warning("Failed to send data to log outout ({})".format(e))
             else:
@@ -125,31 +142,7 @@ class UDPSensorPacketParser(UDPServer):
                 "Failed to parse packet({}) from {} ({})".format(data, address, e)
             )
 
-    def recv_message(self):
-
-        try:
-            # Run until further notice
-            while True:
-                # Get incoming packet/message
-                try:
-                    data, address = self.sock.recvfrom(1024)
-                    # Threads to handle multiple "clients"
-                    c_thread = threading.Thread(
-                        # Thread out and run function incoming_message to start parsing package/message
-                        target=self.incoming_message,
-                        args=(data, address),
-                    )
-                    # run in background
-                    c_thread.daemon = True
-                    c_thread.start()
-
-                except Exception as e:
-                    logging.error("Failed get incoming message ({})".format(e))
-
-        except KeyboardInterrupt:
-            self.shutdown()
-
-    def log_data(self, data):
+    def __log_data(self, data):
 
         logging.debug(json.dumps(data))
         # set filename
@@ -170,7 +163,7 @@ class UDPSensorPacketParser(UDPServer):
         except Exception as e:
             logging.error("Failed to send data to logfile ({})".format(e))
 
-    def decode_sensor_data(self, message, msg_size, timestamp, name_length):
+    def __decode_sensor_data(self, message, msg_size, timestamp, name_length):
 
         # Set start and stop position for name in packet
         # we then use n_stop as start position for parsing temperature and humidity
@@ -184,7 +177,7 @@ class UDPSensorPacketParser(UDPServer):
             "humidity": None,
         }
 
-        # Get name from packet
+        # Get name from packet, return what we have in dics if we fail
         try:
             name = unpack(">{}s".format(name_length), message[n_start:n_stop])
         except error as e:
@@ -195,7 +188,7 @@ class UDPSensorPacketParser(UDPServer):
             )
             return json_dict
 
-        # Parse epoch timestamp and set timestamp to ISO8601 with time zone
+        # Parse epoch timestamp and set timestamp to ISO8601 with time zone, return what we have in dict if we fail
         try:
             ISO_timestamp = "{}{}:00".format(
                 datetime.fromtimestamp(timestamp / 1000).isoformat()[:-3],
@@ -205,7 +198,7 @@ class UDPSensorPacketParser(UDPServer):
             logging.error("failed to parse date data ({}), ignore packet".format(e))
             return json_dict
 
-        # Add data to dictonary we will return from read sensor data
+        # Add data to our sensor data dictonary
         json_dict = {
             "timestamp": ISO_timestamp,
             "name": name[0].decode("utf-8"),
@@ -221,7 +214,7 @@ class UDPSensorPacketParser(UDPServer):
         4. msg_size - n_stop = 5. We have both temparature and humidity data to parse
         """
 
-        # Usecase 1, Check if we need to parse sensor data
+        # Usecase 1, Check if we need to parse sensor data, otherwise we return what we have
         if msg_size > n_stop:
 
             # Usecase 2, only humidity?
@@ -233,7 +226,10 @@ class UDPSensorPacketParser(UDPServer):
                 json_dict["temperature"] = int.from_bytes(
                     message[n_stop:msg_size], "big"
                 )
-                """ Alternative solution for parsing 3 bytes with struct => Make it 4 bytes!
+                """
+                    - Alternative solution for parsing 3 bytes with struct
+                      => Make it 4 bytes!
+
                     tmp = bytearray()
                     tmp.extend(b'\x00')
                     tmp.extend(message[n_stop:msg_size])
@@ -253,7 +249,8 @@ class UDPSensorPacketParser(UDPServer):
 
         """
         I assume the following when proceed:
-        - Temperature are in hundreds of K that I translate that the three first digits is in Kelvin that also means that all temp data always have more than three digits.
+        - Temperature are in hundreds of K that I translate that the three first digits is in Kelvin, the rest is decimals
+          I also assume that that all temp data always have more than three digits.
         - Humidity is measured between 1 to 100. Numbers greater than 100, then third digit is a decimal
         """
         # Do we have temp value?
@@ -268,8 +265,7 @@ class UDPSensorPacketParser(UDPServer):
             except Exception as e:
                 logging.error("Error when modeling temperature with decimals")
 
-        # Do we have humidity value?
-        # Do we need to add decimal to value?
+        # Do we have humidity value? if so, do we need to add decimal to value?
         if json_dict["humidity"] and json_dict["humidity"] > 100:
             try:
                 # Take two first digits and make rest decimals, round to one decimal
@@ -286,5 +282,5 @@ class UDPSensorPacketParser(UDPServer):
 
 if __name__ == "__main__":
     # Create UDP server and listen for incoming packets from generator-wrapper.py
-    server = UDPSensorPacketParser("127.0.0.1", 10514, args.prefix)
+    server = UDPSensorPacketParser(args.addr, 10514, args.prefix)
     server.recv_message()
