@@ -55,8 +55,6 @@ log_adjust = max(min(args.quiet - args.verbose, 2), -2)
 logzero.loglevel(logging.INFO + log_adjust * 10)
 
 """
-   What happens down here?
-
 Note: UDPSensorPacketParser inherits UDPServer class, just for showcasing
       OOP style programming. Overwrites 'recv_message' function and also
       add some more cool functions required for solving the assigment
