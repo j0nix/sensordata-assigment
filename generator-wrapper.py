@@ -89,7 +89,7 @@ def processSpawner(name, command):
             subprocess.Popen(x, stdout=subprocess.PIPE, bufsize=0, shell=True)
             for x in command
         ]
-
+        
     except Exeption as e:
         logger.error("Failed to start generator ({})".format(e))
         sys.exit(1)
@@ -116,10 +116,8 @@ def processSpawner(name, command):
                         # check if process is finished and send anything not sent
                         return_code = p.poll()
                         if return_code is not None:
-                            UDPsender(data, sock)
-                    else:
-                        logger.debug("{} - {}".format(p.pid, error))
-
+                            UDPsender(data)
+                    
                 except KeyboardInterrupt:
                     print("\n\n\tCauth KeyboardInterrupt, Bye Bye!\n\n")
                     sys.exit(0)
