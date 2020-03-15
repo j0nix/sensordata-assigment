@@ -84,8 +84,6 @@ def UDPsender(data):
 
 def processSpawner(name, command):
 
-    procs = []
-
     # Open the generator/generators
     try:
         # loop over commands array and start a subprocess and pipe stdout and don't buffer anything
