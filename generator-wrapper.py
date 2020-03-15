@@ -1,7 +1,9 @@
 """ Generator wrapper. Send sensor data output with UDP over port 10514 """
-import sys, subprocess, socket, os, time, logging, string, random
+import sys, subprocess, socket, os, time, string, random
 from argparse import ArgumentParser
 from argparse import RawTextHelpFormatter
+import logzero, logging
+from logzero import logger
 
 epilog = """
 
@@ -47,13 +49,9 @@ required.add_argument(
 )
 args = parser.parse_args()
 
-"""Logging setup"""
+# Set a custom formatter
 log_adjust = max(min(args.quiet - args.verbose, 2), -2)
-logging.basicConfig(
-    level=logging.INFO + log_adjust * 10,
-    format="%(levelname)-8s[%(module)10s] %(message)s",
-)
-
+logzero.loglevel(logging.INFO + log_adjust * 10)
 
 # Define UDP sender, to make it easy, make it global
 SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -77,7 +75,7 @@ def UDPsender(data):
         p_size = int.from_bytes(data[start : start + 4], "big")
         # send data in the size defined in header
         SOCKET.sendto(data[start : start + p_size], (HOST, PORT))
-        logging.debug("\t-> {}".format(data[start : start + p_size]))
+        logger.debug("\t-> {}".format(data[start : start + p_size]))
         # set start position at the end of the package size
         start += p_size
 
@@ -91,12 +89,12 @@ def processSpawner(name, command):
             subprocess.Popen(x, stdout=subprocess.PIPE, bufsize=0, shell=True)
             for x in command
         ]
-
-    except Exception as e:
-        logging.error("Failed to start generator ({})".format(e))
+        
+    except Exeption as e:
+        logger.error("Failed to start generator ({})".format(e))
         sys.exit(1)
     else:
-        logging.info("all processes started")
+        logger.info("all processes started")
 
         # while generator running, send output over UDP
         while True:
@@ -108,7 +106,7 @@ def processSpawner(name, command):
                     data = p.stdout.read(1024)
                     # send generator output
                     if data:
-                        logging.debug(
+                        logger.debug(
                             "'Sensor:{} with PID {}' sending data to {}:{}".format(
                                 name[procs.index(p)], p.pid, HOST, PORT
                             )
@@ -124,13 +122,12 @@ def processSpawner(name, command):
                     print("\n\n\tCauth KeyboardInterrupt, Bye Bye!\n\n")
                     sys.exit(0)
                 except Exception as e:
-                    logging.error("OOOoopss, some error ({})".format(e))
+                    logger.error("OOOoopss, some error ({})".format(e))
                     sys.exit(1)
-
 
 if __name__ == "__main__":
 
-    logging.info("Spawning {} generator processes".format(args.spawn))
+    logger.info("Spawning {} generator processes".format(args.spawn))
     # Array for storing sensor names, this so we can map which sensor is logging when debug
     sensor_name = []
     # Array for storing commands that spawns subprocesses
@@ -146,7 +143,7 @@ if __name__ == "__main__":
                 sensor_name[x]
             )
         )
-        logging.info("starting sensor {}".format(sensor_name[x]))
+        logger.info("starting sensor {}".format(sensor_name[x]))
     else:
         # Let's get started and spawn some processes
         processSpawner(sensor_name, command)

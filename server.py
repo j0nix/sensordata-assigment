@@ -5,10 +5,13 @@
    Author:     Jon Svendsen
    License:    Free as in beer
 """
+
 import sys, socket, time, pytz, json, socket, threading, logging, os, struct
 from datetime import datetime
 from argparse import ArgumentParser
 from argparse import RawTextHelpFormatter
+import logzero, logging
+from logzero import logger
 
 epilog = """
 Example)
@@ -47,12 +50,9 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-"""Logging setup"""
+# Set a custom formatter
 log_adjust = max(min(args.quiet - args.verbose, 2), -2)
-logging.basicConfig(
-    level=logging.INFO + log_adjust * 10,
-    format="[%(levelname)s] [%(module)s] %(message)s",
-)
+logzero.loglevel(logging.INFO + log_adjust * 10)
 
 """
 Note: UDPSensorPacketParser inherits UDPServer class, just for showcasing
@@ -91,7 +91,7 @@ class UDPSensorPacketParser(UDPServer):
         # Set the filename prefix, if any
         self.prefix = file_prefix
 
-        logging.info("Started UDP server @ {}:{}".format(host, port))
+        logger.info("Started UDP server @ {}:{}".format(host, port))
 
     def recv_message(self):
 
@@ -138,9 +138,9 @@ class UDPSensorPacketParser(UDPServer):
                 try:
                     self.__log_data(parsed_dict)
                 except Exception as e:
-                    logging.warning("Failed to send data to log outout ({})".format(e))
+                    logger.warning("Failed to send data to log outout ({})".format(e))
             else:
-                logging.warning(
+                logger.warning(
                     "Actual packet size and header packet size missmatch. (Data size: {}, packet_size_in_header: {}) data: {}".format(
                         len(data), p_size, data
                     )
@@ -153,7 +153,7 @@ class UDPSensorPacketParser(UDPServer):
 
     def __log_data(self, data):
 
-        logging.debug(json.dumps(data))
+        logger.debug(json.dumps(data))
         # set filename
         try:
             data["name"]
@@ -170,7 +170,7 @@ class UDPSensorPacketParser(UDPServer):
                 writer.write("{}\n".format(json.dumps(data)))
 
         except Exception as e:
-            logging.error("Failed to send data to logfile ({})".format(e))
+            logger.error("Failed to send data to logfile ({})".format(e))
 
     def __decode_sensor_data(self, message, msg_size, timestamp, name_length):
 
@@ -204,7 +204,7 @@ class UDPSensorPacketParser(UDPServer):
                 datetime.now(pytz.timezone("Europe/Stockholm")).strftime("%z")[0:3],
             )
         except ValueError as e:
-            logging.error("failed to parse date data ({}), ignore packet".format(e))
+            logger.error("failed to parse date data ({}), ignore packet".format(e))
             return json_dict
 
         # Add data to our sensor data dictonary
@@ -272,7 +272,7 @@ class UDPSensorPacketParser(UDPServer):
                     1,
                 )
             except Exception as e:
-                logging.error("Error when modeling temperature with decimals")
+                logger.error("Error when modeling temperature with decimals")
 
         # Do we have humidity value? if so, do we need to add decimal to value?
         if json_dict["humidity"] and json_dict["humidity"] > 100:
@@ -284,7 +284,7 @@ class UDPSensorPacketParser(UDPServer):
                     1,
                 )
             except Exception as e:
-                logging.error("Error when modeling humidity with decimals")
+                logger.error("Error when modeling humidity with decimals")
 
         return json_dict
 
