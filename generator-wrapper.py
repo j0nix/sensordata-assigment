@@ -92,7 +92,7 @@ def processSpawner(name, command):
             for x in command
         ]
 
-    except Exeption as e:
+    except Exception as e:
         logging.error("Failed to start generator ({})".format(e))
         sys.exit(1)
     else:
@@ -118,10 +118,8 @@ def processSpawner(name, command):
                         # check if process is finished and send anything not sent
                         return_code = p.poll()
                         if return_code is not None:
-                            UDPsender(data, sock)
-                    else:
-                        logging.debug("{} - {}".format(p.pid, error))
-
+                            UDPsender(data)
+                    
                 except KeyboardInterrupt:
                     print("\n\n\tCauth KeyboardInterrupt, Bye Bye!\n\n")
                     sys.exit(0)

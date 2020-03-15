@@ -5,8 +5,7 @@
    Author:     Jon Svendsen
    License:    Free as in beer
 """
-import sys, socket, time, pytz, json, socket, threading, logging, os
-from struct import *
+import sys, socket, time, pytz, json, socket, threading, logging, os, struct
 from datetime import datetime
 from argparse import ArgumentParser
 from argparse import RawTextHelpFormatter
@@ -74,7 +73,7 @@ class UDPServer:
         # Listen for incoming messages
         try:
             data, address = self.sock.recvfrom(1024)
-            print(data.decode("utf-8"))
+            print("{} {}".format(address, data.decode("utf-8")))
         except Exception as e:
             print("Failed to fetch incoming message from socket ({})".format(e))
 
@@ -114,7 +113,7 @@ class UDPSensorPacketParser(UDPServer):
                         c_thread.start()
                     except Exception as e:
                         logging.error(
-                            "Failed to start daemon for incoming message".format(e)
+                            "Failed to start daemon for incoming message ({})".format(e)
                         )
                         raise e
 
@@ -128,7 +127,7 @@ class UDPSensorPacketParser(UDPServer):
 
         try:
             # Parse header data. size & nlength (name length) will be used to eveluate and parse the rest of the message
-            p_size, p_timestamp, p_nlength = unpack(">IQB", data[:13])
+            p_size, p_timestamp, p_nlength = struct.unpack(">IQB", data[:13])
 
             # make sure that the numbers adds up
             if len(data) == p_size:
@@ -146,8 +145,8 @@ class UDPSensorPacketParser(UDPServer):
                         len(data), p_size, data
                     )
                 )
-                raise error
-        except error as e:
+                raise struct.error
+        except struct.error as e:
             logging.error(
                 "Failed to parse packet({}) from {} ({})".format(data, address, e)
             )
@@ -189,8 +188,8 @@ class UDPSensorPacketParser(UDPServer):
 
         # Get name from packet, return what we have in dics if we fail
         try:
-            name = unpack(">{}s".format(name_length), message[n_start:n_stop])
-        except error as e:
+            name = struct.unpack(">{}s".format(name_length), message[n_start:n_stop])
+        except struct.error as e:
             logging.warning(
                 "failed to unpack name ({}), message data: {}, ignoring packet".format(
                     e, message
@@ -229,7 +228,7 @@ class UDPSensorPacketParser(UDPServer):
 
             # Usecase 2, only humidity?
             if msg_size - n_stop == 2:
-                json_dict["humidity"] = unpack(">H", message[n_stop:msg_size])[0]
+                json_dict["humidity"] = struct.unpack(">H", message[n_stop:msg_size])[0]
 
             # Usecase 3, only temperature?
             if msg_size - n_stop == 3:
