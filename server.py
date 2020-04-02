@@ -231,7 +231,7 @@ class UDPSensorPacketParser(UDPServer):
                 json_dict["humidity"] = struct.unpack(">H", message[n_stop:msg_size])[0]
 
             # Usecase 3, only temperature?
-            if msg_size - n_stop == 3:
+            elif msg_size - n_stop == 3:
                 json_dict["temperature"] = int.from_bytes(
                     message[n_stop:msg_size], "big"
                 )
@@ -246,30 +246,26 @@ class UDPSensorPacketParser(UDPServer):
                 """
 
             # Usecase 4, both temperature and humidity ?
-            if msg_size - n_stop == 5:
+            elif msg_size - n_stop == 5:
                 json_dict["temperature"] = int.from_bytes(
                     message[n_stop : msg_size - 2], "big"
                 )
                 json_dict["humidity"] = int.from_bytes(
                     message[n_stop + 3 : msg_size], "big"
                 )
+
         else:
             return json_dict
 
         """
-        I assume the following when proceed:
-        - Temperature are in hundreds of K that I translate that the three first digits is in Kelvin, the rest is decimals
-          I also assume that that all temp data always have more than three digits.
+        - Temperature is in hundereds of K. This means temp devided with 100. Then transform to celcius
         - Humidity is measured between 1 to 100. Numbers greater than 100, then third digit is a decimal
         """
         # Do we have temp value?
         if json_dict["temperature"]:
             try:
-                # Take first three digits and make rest decimal, round to one decimal
                 json_dict["temperature"] = round(
-                    float(str(json_dict["temperature"])[:3])
-                    + float("0." + str(json_dict["temperature"])[4:]),
-                    1,
+                    (json_dict["temperature"] / 100) - 273.15, 1
                 )
             except Exception as e:
                 logging.error("Error when modeling temperature with decimals")
@@ -278,11 +274,7 @@ class UDPSensorPacketParser(UDPServer):
         if json_dict["humidity"] and json_dict["humidity"] > 100:
             try:
                 # Take two first digits and make rest decimals, round to one decimal
-                json_dict["humidity"] = round(
-                    float(str(json_dict["humidity"])[:2])
-                    + float("0." + str(json_dict["humidity"])[3:]),
-                    1,
-                )
+                json_dict["humidity"] = round(json_dict["humidity"] / 10, 1)
             except Exception as e:
                 logging.error("Error when modeling humidity with decimals")
 
