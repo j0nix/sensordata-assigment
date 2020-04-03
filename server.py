@@ -268,7 +268,7 @@ class UDPSensorPacketParser(UDPServer):
                     (json_dict["temperature"] / 100) - 273.15, 1
                 )
             except Exception as e:
-                logging.error("Error when modeling temperature with decimals")
+                logging.error("Error when modeling temperature with decimals, {}".format(e))
 
         # Do we have humidity value? if so, do we need to add decimal to value?
         if json_dict["humidity"] and json_dict["humidity"] > 100:
@@ -276,7 +276,7 @@ class UDPSensorPacketParser(UDPServer):
                 # Take two first digits and make rest decimals, round to one decimal
                 json_dict["humidity"] = round(json_dict["humidity"] / 10, 1)
             except Exception as e:
-                logging.error("Error when modeling humidity with decimals")
+                logging.error("Error when modeling humidity with decimals, {}".format(e))
 
         return json_dict
 
